@@ -5,6 +5,7 @@
 #include <pwd.h>
 #include <grp.h>
 
+#include <jansson.h>
 // test with getent passwd
 // add libnss_demo.so.2 to /lib
 // add passwd: demo ... to /etc/nsswitch.conf
@@ -34,24 +35,91 @@ int add_string_to_buffer(const char *string, char **str_buf_pos, char **buffer, 
 	return 0;
 }
 
-int pack_passwd(struct user_t user, struct passwd *result, char *buffer, size_t buflen)
-{
+#define JSON_USERNAME_KEY	"username"
+#define JSON_HOME_DIR_KEY	"dir"
+#define JSON_UID_KEY		"uid"
+#define JSON_GID_KEY		"gid"
+#define JSON_GECOS_KEY		"gecos"
+#define JSON_SHELL_KEY		"shell"
 
+json_t demo_create_json_array()
+{
+	json_t *element1, *element2, *element3, *array;
+
+	element1 = json_pack("{s:s,s:s,s:I,s:I,s:s,s:s,s:s}", JSON_USERNAME_KEY, "demo1", 
+                                        JSON_HOME_DIR_KEY, "/home/demo1", 
+                                        JSON_UID_KEY, 1001
+                                        JSON_GID_KEY, 1001,
+                                        JSON_GECOS_KEY, "User Name",
+                                        JSON_SHELL_KEY, "/bin/false");
+	element2 = json_pack("{s:s,s:s,s:I,s:I,s:s,s:s,s:s}", JSON_USERNAME_KEY, "demo2", 
+                                        JSON_HOME_DIR_KEY, "/home/demo2", 
+                                        JSON_UID_KEY, 1001
+                                        JSON_GID_KEY, 1001,
+                                        JSON_GECOS_KEY, "User Name",
+                                        JSON_SHELL_KEY, "/bin/false");
+	element3 = json_pack("{s:s,s:s,s:I,s:I,s:s,s:s,s:s}", JSON_USERNAME_KEY, "demo3", 
+                                        JSON_HOME_DIR_KEY, "/home/demo3", 
+                                        JSON_UID_KEY, 1001
+                                        JSON_GID_KEY, 1001,
+                                        JSON_GECOS_KEY, "User Name",
+                                        JSON_SHELL_KEY, "/bin/false");
+	array = json_pack("[o,o,o]", element1, element2, element3);
+
+	return array;
+}
+
+
+int pack_passwd(json_t *user_json, json_t *search, struct passwd *result, char *buffer, size_t buflen)
+{
+	size_t index;
+	json_t *value;
 	char *p_buffer = buffer;
 	size_t buf_left = buflen;
+	uid_t uid;
 
 	memset(buffer, '\0', buflen);
 
-	add_string_to_buffer(user.name, &result->pw_name, &p_buffer, &buf_left);
-	add_string_to_buffer(user.pw, &result->pw_passwd, &p_buffer, &buf_left);
+	json_array_foreach(array, index, value) {
+		const char *key;
+		json_t *value;
 
-	result->pw_uid = user.uid;
-	result->pw_gid = user.gid;
+		json_object_foreach(obj, key, value) {
+			const char *username, *home_dir, *gecos, *shell, *gid, *uid;
 
-	add_string_to_buffer(user.gecos, &result->pw_gecos, &p_buffer, &buf_left);
-	
-	add_string_to_buffer(user.dir, &result->pw_dir, &p_buffer, &buf_left);
-	add_string_to_buffer(user.shell, &result->pw_shell, &p_buffer, &buf_left);
+			if(!json_equal(value, search))
+				continue;	
+
+			if(json_unpack(value, "{s:s,s:s,s:I,s:I,s:s,s:s,s:s}", JSON_USERNAME_KEY, &username, 
+					JSON_HOME_DIR_KEY, &home_dir, 
+					JSON_UID_KEY, &uid
+					JSON_GID_KEY, &gid,
+					JSON_GECOS_KEY, &gecos,
+					JSON_SHELL_KEY, &shell) < 0)
+			{
+				printf("json unpack error\n");
+				return -1;
+			}
+
+			if(add_string_to_buffer(username, &result->pw_name, &p_buffer, &buf_left) < 0)
+				return -2;
+
+			if(add_string_to_buffer(password, &result->pw_passwd, &p_buffer, &buf_left) < 0)
+				return -2;
+
+			result->pw_uid = uid;
+			result->pw_gid = gid;
+
+			if(add_string_to_buffer(gecos, &result->pw_gecos, &p_buffer, &buf_left) < 0)
+				return -2;
+
+			if(add_string_to_buffer(home_dir, &result->pw_dir, &p_buffer, &buf_left) < 0)
+				return -2;
+
+			if(add_string_to_buffer(shell, &result->pw_shell, &p_buffer, &buf_left) < 0)
+				return -2;
+		}
+	}
 
 	return 0;
 }
@@ -98,13 +166,11 @@ _nss_demo_getpwent_r (struct passwd *result, char *buffer,
 } ;
 
 // find pwd by uid
-enum nss_status
+	enum nss_status
 _nss_demo_getpwuid_r(uid_t uid, struct passwd *result, char *buffer, size_t buflen, int *errnop)
 {
 	printf( "@ %s with uid %u %lu\n", __FUNCTION__, uid, buflen ) ;
 	struct user_t user;
-	char buf[1024];
-	static int i = 0;
 
 	snprintf(user.name, sizeof(user.name), "demo");
 	snprintf(user.pw, sizeof(user.pw), "demo");
@@ -136,8 +202,6 @@ _nss_demo_getpwnam_r (const char *nam, struct passwd *result, char *buffer,
 		size_t buflen, int *errnop) {
 	printf( "@ %s with nam_r %s\n", __FUNCTION__, nam ) ;
 	struct user_t user;
-	char buf[1024];
-	static int i = 0;
 
 	snprintf(user.name, sizeof(user.name), "demo");
 	snprintf(user.pw, sizeof(user.pw), "demo");

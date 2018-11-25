@@ -2,7 +2,7 @@ VERSION = 0.0
 CC = gcc
 CFLAGS = -fPIC -shared -Wall -g3 -DVERSION=\"$(VERSION)\"
 LIB = libnss_demo.so.2
-LDFLAGS = -Wl,-soname,$(LIB)
+LDFLAGS = -ljansson -Wl,-soname,$(LIB)
 OBJ = main.o
 
 $(LIB): $(OBJ)
