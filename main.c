@@ -85,7 +85,7 @@ _nss_demo_getpwent_r (struct passwd *result, char *buffer,
 	user.gid = 1002;
 	snprintf(user.gecos, sizeof(user.gecos), "user info");
 	user.dir[0] = '\0';
-	snprintf(user.shell, sizeof(user.shell), "/dev/null");
+	snprintf(user.shell, sizeof(user.shell), "/bin/false");
 
 	if( i++ == 0 ) {
 		printf( "@ %s %ld\n", __FUNCTION__, buflen ) ;
@@ -112,7 +112,7 @@ _nss_demo_getpwuid_r(uid_t uid, struct passwd *result, char *buffer, size_t bufl
 	user.gid = 1002;
 	snprintf(user.gecos, sizeof(user.gecos), "user info");
 	user.dir[0] = '\0';
-	snprintf(user.shell, sizeof(user.shell), "/dev/null");
+	snprintf(user.shell, sizeof(user.shell), "/bin/false");
 
 	if(uid == 1002)
 	{
@@ -145,7 +145,7 @@ _nss_demo_getpwnam_r (const char *nam, struct passwd *result, char *buffer,
 	user.gid = 1002;
 	snprintf(user.gecos, sizeof(user.gecos), "user info");
 	user.dir[0] = '\0';
-	snprintf(user.shell, sizeof(user.shell), "/dev/null");
+	snprintf(user.shell, sizeof(user.shell), "/bin/false");
 
 	if(!strcmp(user.name, nam))
 	{
